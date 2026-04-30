@@ -1,0 +1,76 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-base: #070b14;
+  --bg-surface: #0d1220;
+  --bg-elevated: #121929;
+  --bg-card: #0f1622;
+  --border: #1e2d47;
+  --border-bright: #263a5a;
+  --text-primary: #e8edf8;
+  --text-secondary: #7a90b4;
+  --text-dim: #3d5070;
+
+  --pass: #00e5a0;
+  --pass-dim: rgba(0, 229, 160, 0.12);
+  --fail: #ff3f5b;
+  --fail-dim: rgba(255, 63, 91, 0.12);
+  --high: #ff3f5b;
+  --high-dim: rgba(255, 63, 91, 0.1);
+  --medium: #ff8c00;
+  --medium-dim: rgba(255, 140, 0, 0.1);
+  --low: #3ab4f2;
+  --low-dim: rgba(58, 180, 242, 0.1);
+  --accent: #4f8ef7;
+  --accent-dim: rgba(79, 142, 247, 0.1);
+
+  --font-sans: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-surface); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade { animation: fadeIn 0.4s ease both; }
+.animate-fade-delay-1 { animation: fadeIn 0.4s 0.05s ease both; }
+.animate-fade-delay-2 { animation: fadeIn 0.4s 0.1s ease both; }
+.animate-fade-delay-3 { animation: fadeIn 0.4s 0.15s ease both; }
+.animate-fade-delay-4 { animation: fadeIn 0.4s 0.2s ease both; }
+.animate-fade-delay-5 { animation: fadeIn 0.4s 0.25s ease both; }

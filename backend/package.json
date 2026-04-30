@@ -1,0 +1,22 @@
+{
+  "name": "cloudsentinel",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-cloudtrail": "^3.1038.0",
+    "@aws-sdk/client-ec2": "^3.1038.0",
+    "@aws-sdk/client-iam": "^3.1038.0",
+    "@aws-sdk/client-s3": "^3.1038.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
