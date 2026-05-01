@@ -1,5 +1,8 @@
 import { fetchS3Buckets } from "./s3Service.js";
 import { fetchEC2Instances } from "./ec2Service.js";
+import { isCloudTrailEnabled } from "./cloudTrailService.js";
+import { isRootMFAEnabled } from "./iamService.js";
+import { saveResultsToS3 } from "./storageService.js";
 
 export const runCISChecks = async () => {
   const results = [];
@@ -88,6 +91,30 @@ export const runCISChecks = async () => {
       }
     }
   }
+
+  // 🔹 CloudTrail Check
+const cloudTrail = await isCloudTrailEnabled();
+
+results.push({
+  check: "CloudTrail Enabled",
+  status: cloudTrail ? "PASS" : "FAIL",
+  severity: cloudTrail ? "LOW" : "HIGH",
+  resourceId: "account",
+  reason: cloudTrail ? "CloudTrail is enabled" : "CloudTrail is not enabled",
+  timestamp: now,
+});
+
+// 🔹 IAM MFA Check
+const mfa = await isRootMFAEnabled();
+
+results.push({
+  check: "Root MFA Enabled",
+  status: mfa ? "PASS" : "FAIL",
+  severity: mfa ? "LOW" : "HIGH",
+  resourceId: "account",
+  reason: mfa ? "MFA enabled" : "MFA not enabled",
+  timestamp: now,
+});
 
   return results; // ✅ MUST be at the end
 };
