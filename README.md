@@ -15,7 +15,6 @@ CloudSentinel scans your AWS resources (S3, EC2) and account-level settings (Clo
 ## Project Structure
 
 ```
-```bash
 backend/
 │── src/
 │   ├── controllers/
