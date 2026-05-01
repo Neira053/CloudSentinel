@@ -21,7 +21,30 @@ function formatTime(iso) {
   } catch { return iso }
 }
 
-// ─── Icons (inline SVG) ─────────────────────────────────────────────────────
+function getCategory(check = '', resourceId = '') {
+  const c = check.toLowerCase()
+  const r = resourceId.toLowerCase()
+  if (c.includes('mfa') || c.includes('root')) return { label: 'Identity',   color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.25)' }
+  if (c.includes('cloudtrail') || c.includes('trail')) return { label: 'Monitoring', color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.25)' }
+  if (c.includes('s3') || r.includes('bucket') || c.includes('bucket')) return { label: 'Storage',    color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.25)' }
+  if (c.includes('ec2') || c.includes('ssh') || r.startsWith('i-') || r.includes('sg-')) return { label: 'Compute',    color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.25)' }
+  return { label: 'General', color: 'var(--text-secondary)', bg: 'var(--bg-elevated)', border: 'var(--border)' }
+}
+
+function isAccountLevel(resourceId = '') {
+  return resourceId.toLowerCase() === 'account'
+}
+
+function displayResourceId(resourceId = '') {
+  return isAccountLevel(resourceId) ? 'AWS Account' : resourceId
+}
+
+function isAccountCheck(check = '', resourceId = '') {
+  const c = check.toLowerCase()
+  return isAccountLevel(resourceId) || c.includes('cloudtrail') || c.includes('mfa') || c.includes('root')
+}
+
+// ─── Icons ──────────────────────────────────────────────────────────────────
 
 const Icon = {
   Shield: () => (
@@ -39,8 +62,8 @@ const Icon = {
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
   ),
-  AlertTriangle: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  AlertTriangle: ({ size = 16 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
       <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
     </svg>
@@ -67,6 +90,12 @@ const Icon = {
       <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
     </svg>
   ),
+  User: () => (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  ),
   Wifi: () => (
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <line x1="1" y1="1" x2="23" y2="23"/>
@@ -80,7 +109,7 @@ const Icon = {
   ),
 }
 
-// ─── Sub-components ─────────────────────────────────────────────────────────
+// ─── Badges ─────────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
   const isPass = status === 'PASS'
@@ -118,22 +147,33 @@ function SeverityBadge({ severity }) {
   )
 }
 
-function SummaryCard({ label, value, color, children, delay, icon }) {
+function CategoryBadge({ check, resourceId }) {
+  const cat = getCategory(check, resourceId)
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 8px', borderRadius: 6,
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.07em',
+      background: cat.bg, color: cat.color, border: `1px solid ${cat.border}`,
+    }}>
+      {cat.label}
+    </span>
+  )
+}
+
+// ─── Summary Card ────────────────────────────────────────────────────────────
+
+function SummaryCard({ label, value, color, children, delay }) {
   return (
     <div className={`animate-fade-delay-${delay}`} style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)',
-      padding: '24px 28px',
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 'var(--radius)', padding: '24px 28px',
       display: 'flex', flexDirection: 'column', gap: 8,
       position: 'relative', overflow: 'hidden',
-      transition: 'border-color 0.2s, transform 0.2s',
-      cursor: 'default',
+      transition: 'border-color 0.2s, transform 0.2s', cursor: 'default',
     }}
     onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-bright)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
     onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)' }}
     >
-      {/* top glow line */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 2,
         background: `linear-gradient(90deg, transparent, ${color || 'var(--accent)'}, transparent)`,
@@ -143,7 +183,7 @@ function SummaryCard({ label, value, color, children, delay, icon }) {
         {label}
       </span>
       {value !== undefined && (
-        <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, color: color || 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <span style={{ fontSize: 44, fontWeight: 700, lineHeight: 1, color: color || 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           {value}
         </span>
       )}
@@ -151,6 +191,8 @@ function SummaryCard({ label, value, color, children, delay, icon }) {
     </div>
   )
 }
+
+// ─── Filter Button ───────────────────────────────────────────────────────────
 
 function FilterButton({ label, active, onClick, color }) {
   return (
@@ -167,50 +209,96 @@ function FilterButton({ label, active, onClick, color }) {
   )
 }
 
+// ─── Result Row ──────────────────────────────────────────────────────────────
+
 function ResultRow({ item, index }) {
   const [open, setOpen] = useState(false)
+  const isCritical = item.status === 'FAIL' && item.severity === 'HIGH'
+  const isAcct = isAccountLevel(item.resourceId)
+
+  const leftBorderColor = item.status === 'FAIL'
+    ? (item.severity === 'HIGH' ? 'var(--high)' : item.severity === 'MEDIUM' ? 'var(--medium)' : 'var(--low)')
+    : 'var(--pass)'
+
   return (
     <div
       className={`animate-fade-delay-${Math.min(index + 1, 5)}`}
       style={{
-        background: open ? 'var(--bg-elevated)' : 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderLeft: `3px solid ${item.status === 'FAIL'
-          ? (item.severity === 'HIGH' ? 'var(--high)' : item.severity === 'MEDIUM' ? 'var(--medium)' : 'var(--low)')
-          : 'var(--pass)'}`,
+        background: isCritical
+          ? (open ? 'rgba(255,63,91,0.07)' : 'rgba(255,63,91,0.04)')
+          : (open ? 'var(--bg-elevated)' : 'var(--bg-card)'),
+        border: isCritical ? '1px solid rgba(255,63,91,0.35)' : '1px solid var(--border)',
+        borderLeft: `3px solid ${leftBorderColor}`,
         borderRadius: 'var(--radius-sm)',
         overflow: 'hidden',
-        transition: 'background 0.15s, box-shadow 0.15s',
+        transition: 'background 0.15s',
         cursor: 'pointer',
+        boxShadow: isCritical ? '0 0 16px rgba(255,63,91,0.08)' : 'none',
       }}
       onClick={() => setOpen(o => !o)}
     >
+      {/* Critical warning banner */}
+      {isCritical && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 20px', background: 'rgba(255,63,91,0.1)',
+          borderBottom: '1px solid rgba(255,63,91,0.2)',
+          fontSize: 11, fontWeight: 700, color: 'var(--fail)',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+        }}>
+          <Icon.AlertTriangle size={12} />
+          Critical Risk — Immediate Attention Required
+        </div>
+      )}
+
       {/* Main row */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 180px 90px 100px 24px',
         alignItems: 'center', gap: 16, padding: '14px 20px',
       }}>
-        {/* Check name + resource */}
+        {/* Check name + resource + badges */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 8 }}>
-            {item.status === 'FAIL' && <Icon.AlertTriangle />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 5 }}>
+            <CategoryBadge check={item.check} resourceId={item.resourceId} />
+            {isAcct && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 6,
+                background: 'rgba(167,139,250,0.1)', color: '#a78bfa',
+                border: '1px solid rgba(167,139,250,0.2)', letterSpacing: '0.07em',
+              }}>
+                ACCOUNT-LEVEL
+              </span>
+            )}
+          </div>
+          <div style={{
+            fontWeight: isCritical ? 700 : 600,
+            fontSize: 14,
+            color: isCritical ? 'var(--fail)' : 'var(--text-primary)',
+            marginBottom: 3,
+          }}>
             {item.check}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-secondary)', fontSize: 12 }}>
-            <Icon.Server />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{item.resourceId}</span>
+            {isAcct ? <Icon.User /> : <Icon.Server />}
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+              {displayResourceId(item.resourceId)}
+            </span>
           </div>
         </div>
+
         {/* Timestamp */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-dim)', fontSize: 12 }}>
           <Icon.Clock />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>{formatTime(item.timestamp)}</span>
         </div>
+
         {/* Severity */}
         <div><SeverityBadge severity={item.severity} /></div>
+
         {/* Status */}
         <div><StatusBadge status={item.status} /></div>
+
         {/* Chevron */}
         <div style={{ color: 'var(--text-dim)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s', fontSize: 16 }}>›</div>
       </div>
@@ -218,8 +306,9 @@ function ResultRow({ item, index }) {
       {/* Expanded reason */}
       {open && (
         <div style={{
-          padding: '12px 20px 16px', borderTop: '1px solid var(--border)',
-          background: 'var(--bg-surface)',
+          padding: '12px 20px 16px',
+          borderTop: `1px solid ${isCritical ? 'rgba(255,63,91,0.2)' : 'var(--border)'}`,
+          background: isCritical ? 'rgba(255,63,91,0.06)' : 'var(--bg-surface)',
         }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
             Reason
@@ -233,15 +322,75 @@ function ResultRow({ item, index }) {
   )
 }
 
-// ─── Loading State ───────────────────────────────────────────────────────────
+// ─── Section Group ───────────────────────────────────────────────────────────
+
+function FindingsSection({ title, subtitle, icon, items, accentColor, tableHeader }) {
+  if (items.length === 0) return null
+  return (
+    <div style={{ marginBottom: 36 }}>
+      {/* Section label */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        marginBottom: 12,
+        paddingBottom: 12,
+        borderBottom: `1px solid ${accentColor}33`,
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 8,
+          background: `${accentColor}18`,
+          border: `1px solid ${accentColor}44`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: accentColor, fontSize: 14,
+        }}>
+          {icon}
+        </div>
+        <div>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>{title}</h3>
+          {subtitle && <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 2 }}>{subtitle}</p>}
+        </div>
+        <span style={{
+          marginLeft: 'auto',
+          fontSize: 12, fontFamily: 'var(--font-mono)',
+          color: 'var(--text-dim)',
+        }}>
+          {items.filter(i => i.status === 'FAIL').length} fail · {items.filter(i => i.status === 'PASS').length} pass
+        </span>
+      </div>
+
+      {/* Column headers */}
+      {tableHeader && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 180px 90px 100px 24px',
+          gap: 16, padding: '6px 20px 10px',
+          fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+          color: 'var(--text-dim)',
+        }}>
+          <span>Check / Resource</span>
+          <span>Timestamp</span>
+          <span>Severity</span>
+          <span>Status</span>
+          <span />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {items.map((item, i) => (
+          <ResultRow key={`${item.resourceId}-${item.check}-${i}`} item={item} index={i} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Loading / Error ─────────────────────────────────────────────────────────
 
 function LoadingState() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', gap: 20 }}>
       <div style={{
         width: 48, height: 48, borderRadius: '50%',
-        border: '2px solid var(--border)',
-        borderTopColor: 'var(--accent)',
+        border: '2px solid var(--border)', borderTopColor: 'var(--accent)',
         animation: 'spin 0.8s linear infinite',
       }} />
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, fontFamily: 'var(--font-mono)' }}>
@@ -250,8 +399,6 @@ function LoadingState() {
     </div>
   )
 }
-
-// ─── Error State ─────────────────────────────────────────────────────────────
 
 function ErrorState({ message, onRetry }) {
   return (
@@ -264,7 +411,7 @@ function ErrorState({ message, onRetry }) {
         padding: '10px 20px', borderRadius: 8, cursor: 'pointer',
         background: 'var(--fail-dim)', color: 'var(--fail)',
         border: '1px solid rgba(255,63,91,0.3)', fontFamily: 'var(--font-sans)',
-        fontWeight: 600, fontSize: 13, transition: 'background 0.15s',
+        fontWeight: 600, fontSize: 13,
       }}>
         <Icon.Refresh /> Retry
       </button>
@@ -272,7 +419,7 @@ function ErrorState({ message, onRetry }) {
   )
 }
 
-// ─── Main App ───────────────────────────────────────────────────────────────
+// ─── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [data, setData]           = useState(null)
@@ -283,13 +430,11 @@ export default function App() {
   const [lastScan, setLastScan]   = useState(null)
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     try {
       const res = await fetch('/api/cis-results')
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-      const json = await res.json()
-      setData(json)
+      setData(await res.json())
       setLastScan(new Date())
     } catch (err) {
       setError(err.message || 'Unknown error')
@@ -300,8 +445,10 @@ export default function App() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  // Filtered + sorted results
-  const filtered = data
+  const s = data?.summary || {}
+
+  // Filter + sort all results
+  const allFiltered = data
     ? sortResults(
         data.results.filter(r =>
           (statusFilter === 'ALL' || r.status === statusFilter) &&
@@ -310,7 +457,9 @@ export default function App() {
       )
     : []
 
-  const s = data?.summary || {}
+  // Split into account-level vs resource-level
+  const accountItems  = allFiltered.filter(r => isAccountCheck(r.check, r.resourceId))
+  const resourceItems = allFiltered.filter(r => !isAccountCheck(r.check, r.resourceId))
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
@@ -329,12 +478,9 @@ export default function App() {
         {/* ── Header ── */}
         <header style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '28px 0 32px',
-          borderBottom: '1px solid var(--border)',
-          marginBottom: 32,
+          padding: '28px 0 32px', borderBottom: '1px solid var(--border)', marginBottom: 32,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            {/* Logo */}
             <div style={{
               width: 40, height: 40, borderRadius: 10,
               background: 'linear-gradient(135deg, rgba(79,142,247,0.2), rgba(79,142,247,0.05))',
@@ -345,7 +491,7 @@ export default function App() {
               <Icon.Shield />
             </div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)' }}>
+              <h1 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.1, color: 'var(--text-primary)' }}>
                 Cloud<span style={{ color: 'var(--accent)' }}>Sentinel</span>
               </h1>
               <p style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', letterSpacing: '0.08em' }}>
@@ -362,8 +508,7 @@ export default function App() {
               </div>
             )}
             <button
-              onClick={fetchData}
-              disabled={loading}
+              onClick={fetchData} disabled={loading}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '9px 18px', borderRadius: 8, cursor: loading ? 'not-allowed' : 'pointer',
@@ -384,20 +529,16 @@ export default function App() {
 
         {/* ── Summary Cards ── */}
         {data && (
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-
+          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 36 }}>
             <SummaryCard label="Total Checks" value={s.total} color="var(--accent)" delay={1} />
-
             <SummaryCard label="Passed" value={s.pass} color="var(--pass)" delay={2} />
-
             <SummaryCard label="Failed" value={s.fail} color="var(--fail)" delay={3} />
-
             <SummaryCard label="By Severity" delay={4}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
                 {[
-                  { key: 'HIGH',   color: 'var(--high)',   label: 'HIGH' },
+                  { key: 'HIGH', color: 'var(--high)', label: 'HIGH' },
                   { key: 'MEDIUM', color: 'var(--medium)', label: 'MED' },
-                  { key: 'LOW',    color: 'var(--low)',    label: 'LOW' },
+                  { key: 'LOW', color: 'var(--low)', label: 'LOW' },
                 ].map(({ key, color, label }) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-dim)', width: 32 }}>{label}</span>
@@ -418,92 +559,79 @@ export default function App() {
           </section>
         )}
 
-        {/* ── Findings Section ── */}
-        <section>
-
-          {/* Section header + filters */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
-                Security Findings
-                {data && (
-                  <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 500, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-                    ({filtered.length} of {data.results.length})
-                  </span>
-                )}
-              </h2>
-            </div>
-            {data && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--text-dim)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Icon.Filter /> Filter:
-                </span>
-                {['ALL', 'FAIL', 'PASS'].map(s => (
-                  <FilterButton key={s} label={s} active={statusFilter === s}
-                    onClick={() => setStatus(s)}
-                    color={s === 'FAIL' ? 'var(--fail)' : s === 'PASS' ? 'var(--pass)' : 'var(--accent)'}
-                  />
-                ))}
-                <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
-                {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map(sv => (
-                  <FilterButton key={sv} label={sv} active={sevFilter === sv}
-                    onClick={() => setSev(sv)}
-                    color={sv === 'HIGH' ? 'var(--high)' : sv === 'MEDIUM' ? 'var(--medium)' : sv === 'LOW' ? 'var(--low)' : 'var(--accent)'}
-                  />
-                ))}
-              </div>
-            )}
+        {/* ── Filters ── */}
+        {data && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 28 }}>
+            <span style={{ color: 'var(--text-dim)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 5, marginRight: 4 }}>
+              <Icon.Filter /> Filter:
+            </span>
+            {['ALL', 'FAIL', 'PASS'].map(st => (
+              <FilterButton key={st} label={st} active={statusFilter === st}
+                onClick={() => setStatus(st)}
+                color={st === 'FAIL' ? 'var(--fail)' : st === 'PASS' ? 'var(--pass)' : 'var(--accent)'}
+              />
+            ))}
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+            {['ALL', 'HIGH', 'MEDIUM', 'LOW'].map(sv => (
+              <FilterButton key={sv} label={sv} active={sevFilter === sv}
+                onClick={() => setSev(sv)}
+                color={sv === 'HIGH' ? 'var(--high)' : sv === 'MEDIUM' ? 'var(--medium)' : sv === 'LOW' ? 'var(--low)' : 'var(--accent)'}
+              />
+            ))}
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+              {allFiltered.length} of {data.results.length} results
+            </span>
           </div>
+        )}
 
-          {/* Table header */}
-          {data && filtered.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 180px 90px 100px 24px',
-              gap: 16, padding: '8px 20px 10px',
-              fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: 'var(--text-dim)',
-            }}>
-              <span>Check / Resource</span>
-              <span>Timestamp</span>
-              <span>Severity</span>
-              <span>Status</span>
-              <span />
+        {/* ── Findings ── */}
+        <section>
+          {loading && <LoadingState />}
+          {!loading && error && <ErrorState message={error} onRetry={fetchData} />}
+
+          {!loading && data && allFiltered.length === 0 && (
+            <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-dim)', fontSize: 14 }}>
+              No results match the current filters.
             </div>
           )}
 
-          {/* Results */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {loading && <LoadingState />}
-            {!loading && error && <ErrorState message={error} onRetry={fetchData} />}
-            {!loading && data && filtered.length === 0 && (
-              <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-dim)', fontSize: 14 }}>
-                No results match the current filters.
-              </div>
-            )}
-            {!loading && filtered.map((item, i) => (
-              <ResultRow key={`${item.resourceId}-${item.check}-${i}`} item={item} index={i} />
-            ))}
-          </div>
+          {!loading && data && (
+            <>
+              {/* Account Security Issues */}
+              <FindingsSection
+                title="Account Security Issues"
+                subtitle="CloudTrail · MFA · Root Account"
+                icon="🛡️"
+                items={accountItems}
+                accentColor="#a78bfa"
+                tableHeader={accountItems.length > 0}
+              />
 
+              {/* Resource-Level Findings */}
+              <FindingsSection
+                title="Resource-Level Findings"
+                subtitle="S3 · EC2 · Security Groups"
+                icon="☁️"
+                items={resourceItems}
+                accentColor="#4f8ef7"
+                tableHeader={resourceItems.length > 0}
+              />
+            </>
+          )}
         </section>
 
         {/* ── Footer ── */}
         <footer style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
           <p style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-            CloudSentinel v1.0 — AWS CIS Benchmark Scanner
+            CloudSentinel v2.0 — AWS CIS Benchmark Scanner
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
             Built with Node.js + React · AWS SDK v3
           </p>
         </footer>
-
       </div>
 
-      {/* Spin keyframe via style tag */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

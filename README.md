@@ -1,14 +1,14 @@
 # CloudSentinel 🛡️
 ### AWS Cloud Security Scanner — CIS Benchmark Evaluation
 
-CloudSentinel scans your AWS resources (S3 buckets & EC2 instances) against CIS security benchmarks and visualizes misconfigurations through a modern React dashboard.
+CloudSentinel scans your AWS resources (S3, EC2) and account-level settings (CloudTrail, MFA) against CIS security benchmarks, and visualizes misconfigurations through a modern React dashboard with severity-based prioritization.
 
 ---
 
 ## Tech Stack
 
 **Backend** — Node.js · Express.js · AWS SDK v3  
-**Frontend** — React 18 · Vite
+**Frontend** — React 18 · Vite · IBM Plex Sans
 
 ---
 
@@ -45,7 +45,7 @@ cloudsentinel/
 
 ### Prerequisites
 - Node.js v18+
-- AWS account with S3 and EC2 access
+- AWS account with S3, EC2, CloudTrail, and IAM access
 - AWS credentials configured locally
 
 ### 1. Configure AWS Credentials
@@ -81,6 +81,8 @@ npm run dev
 # Dashboard at http://localhost:3000
 ```
 
+> API requests to `/api/*` are automatically proxied to `http://localhost:5000` via Vite config.
+
 ---
 
 ## API Endpoints
@@ -97,12 +99,28 @@ npm run dev
 ```json
 {
   "summary": {
-    "total": 5,
-    "pass": 2,
-    "fail": 3,
-    "bySeverity": { "HIGH": 2, "MEDIUM": 1, "LOW": 2 }
+    "total": 7,
+    "pass": 3,
+    "fail": 4,
+    "bySeverity": { "HIGH": 3, "MEDIUM": 1, "LOW": 0 }
   },
   "results": [
+    {
+      "check": "Root MFA Enabled",
+      "status": "FAIL",
+      "severity": "HIGH",
+      "resourceId": "account",
+      "reason": "Root account MFA is not enabled",
+      "timestamp": "2026-04-30T..."
+    },
+    {
+      "check": "CloudTrail Enabled",
+      "status": "FAIL",
+      "severity": "HIGH",
+      "resourceId": "account",
+      "reason": "No active CloudTrail trail found",
+      "timestamp": "2026-04-30T..."
+    },
     {
       "check": "EC2 SSH Access",
       "status": "FAIL",
@@ -119,12 +137,48 @@ npm run dev
 
 ## CIS Checks Implemented
 
-**S3**
-- Public access detection
-- Encryption disabled detection
+### 🪣 S3 — Storage
+| Check | Severity |
+|-------|----------|
+| Public access detection | HIGH |
+| Encryption disabled detection | MEDIUM |
 
-**EC2**
-- SSH open to `0.0.0.0/0` (critical)
+### 💻 EC2 — Compute
+| Check | Severity |
+|-------|----------|
+| SSH open to `0.0.0.0/0` | HIGH |
+
+### 🛡️ Account-Level (NEW)
+| Check | Category | Severity |
+|-------|----------|----------|
+| CloudTrail Enabled | Monitoring | HIGH |
+| Root MFA Enabled | Identity | HIGH |
+
+> Total checks: **7** — designed for easy extensibility
+
+---
+
+## Frontend Dashboard Features
+
+- **Summary cards** — Total, Passed, Failed, Severity breakdown with progress bars
+- **Two grouped sections** — Account Security Issues (CloudTrail, MFA) and Resource-Level Findings (S3, EC2)
+- **Category badges** — Storage · Compute · Monitoring · Identity
+- **Critical risk banner** — HIGH FAIL rows have red glow, bold text, and a warning strip
+- **"AWS Account"** shown instead of raw `"account"` resourceId
+- **Filter controls** — by Status and Severity
+- **Click to expand** — each row reveals the failure reason
+- **Refresh button** with spinner + last scan timestamp
+- **Error state** with retry if backend is unreachable
+
+---
+
+## AWS Storage Integration
+
+Scan results are stored in Amazon S3 for audit logging and historical analysis:
+
+- Each scan generates a timestamped JSON file: `scan-<timestamp>.json`
+- Enables historical comparison and compliance tracking
+- Stored securely with bucket-level access controls
 
 ---
 
@@ -138,13 +192,14 @@ npm run dev
 
 ## Future Improvements
 
-- DynamoDB integration for scan history
-- Multi-account scanning
-- Real-time alerts
-- Additional CIS checks (IAM, CloudTrail, MFA)
+- DynamoDB integration for structured querying of scan history
+- Multi-account scanning support
+- Real-time alerts and notifications
+- Additional CIS checks: IAM policies, VPC Flow Logs, GuardDuty
 
 ---
 
 ## Author
 
-**Neha Paswan**
+**Neha Paswan**  
+This project demonstrates full-stack cloud integration, CIS security evaluation logic, and real-world DevOps dashboard design — beyond a basic prototype toward a scalable cloud security tool.
