@@ -432,7 +432,9 @@ export default function App() {
   const fetchData = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const res = await fetch('/api/cis-results')
+      const res = await fetch(
+  `${import.meta.env.VITE_API_URL}/api/cis-results`
+)
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       setData(await res.json())
       setLastScan(new Date())
