@@ -15,28 +15,28 @@ CloudSentinel scans your AWS resources (S3, EC2) and account-level settings (Clo
 ## Project Structure
 
 ```
-cloudsentinel/
-├── backend/
-│   ├── src/
-│   │   ├── controllers/
-│   │   │   ├── cisController.js
-│   │   │   └── s3Controller.js
-│   │   ├── services/
-│   │   │   ├── cisService.js
-│   │   │   ├── s3Service.js
-│   │   │   └── ec2Service.js
-│   │   └── routes/
-│   │       ├── cisRoutes.js
-│   │       └── s3Routes.js
-│   └── server.js
-└── frontend/
-    ├── src/
-    │   ├── App.jsx
-    │   ├── main.jsx
-    │   └── index.css
-    ├── index.html
-    ├── vite.config.js
-    └── package.json
+backend/
+│── src/
+│   ├── controllers/
+│   │   ├── cisController.js
+│   │   ├── s3Controller.js
+│   │   ├── ec2Controller.js
+│   │
+│   ├── services/
+│   │   ├── s3Service.js              # Fetch S3 bucket details
+│   │   ├── ec2Service.js             # Fetch EC2 instances & security groups
+│   │   ├── cisService.js             # Core CIS evaluation engine
+│   │   ├── cloudTrailService.js      # Check if CloudTrail is enabled (NEW)
+│   │   ├── iamService.js             # Check if root MFA is enabled (NEW)
+│   │   ├── storageService.js         # Store scan results in S3 (NEW)
+│   │
+│   ├── routes/
+│   │   ├── cisRoutes.js
+│   │   ├── s3Routes.js
+│   │   ├── ec2Routes.js
+│
+│── server.js                        # Entry point
+│── package.json
 ```
 
 ---
