@@ -5,8 +5,8 @@ import s3Routes from "./src/routes/s3Routes.js";
 import cisRoutes from "./src/routes/cisRoutes.js";
 
 
-console.log("KEY:", process.env.AWS_ACCESS_KEY);
-console.log("SECRET:", process.env.AWS_SECRET_KEY);
+console.log("KEY:", process.env.AWS_ACCESS_KEY_ID);
+console.log("SECRET:", process.env.AWS_SECRET_ACCESS_KEY);
 
 
 const app = express();
@@ -18,6 +18,8 @@ app.use("/api", ec2Routes);
 app.use("/api", s3Routes);
 app.use("/api", cisRoutes);
 
-
+app.get("/", (req, res) => {
+  res.send("CloudSentinel Backend Running");
+});
 
 export default app;

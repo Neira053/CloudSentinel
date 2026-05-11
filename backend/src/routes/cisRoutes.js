@@ -1,4 +1,5 @@
 import express from "express";
+import { runCISChecks } from "../services/cisService.js";
 import { getCISResults } from "../controllers/cisController.js";
 
 const router = express.Router();
