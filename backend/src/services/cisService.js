@@ -2,14 +2,19 @@ import { fetchS3Buckets } from "./s3Service.js";
 import { fetchEC2Instances } from "./ec2Service.js";
 import { isCloudTrailEnabled } from "./cloudTrailService.js";
 import { isRootMFAEnabled } from "./iamService.js";
-import { saveResultsToS3 } from "./storageService.js";
 
 export const runCISChecks = async () => {
   const results = [];
   const now = new Date().toISOString();
 
   // 🔹 S3 Checks
-  const buckets = await fetchS3Buckets();
+ let buckets = [];
+
+try {
+  buckets = await fetchS3Buckets();
+} catch (error) {
+  console.error("S3 Error:", error.message);
+}
 
   for (let bucket of buckets) {
     
@@ -57,7 +62,14 @@ export const runCISChecks = async () => {
   }
 
   // 🔹 EC2 Checks (NOW THIS WILL RUN)
-  const instances = await fetchEC2Instances();
+  let instances = [];
+
+try {
+  instances = await fetchEC2Instances();
+} catch (error) {
+  console.error("EC2 Error:", error.message);
+}
+
 
   for (let instance of instances) {
     for (let sg of instance.securityGroups) {
@@ -93,7 +105,13 @@ export const runCISChecks = async () => {
   }
 
   // 🔹 CloudTrail Check
-const cloudTrail = await isCloudTrailEnabled();
+let cloudTrail = false;
+
+try {
+  cloudTrail = await isCloudTrailEnabled();
+} catch (error) {
+  console.error("CloudTrail Error:", error.message);
+}
 
 results.push({
   check: "CloudTrail Enabled",
@@ -105,7 +123,13 @@ results.push({
 });
 
 // 🔹 IAM MFA Check
-const mfa = await isRootMFAEnabled();
+let mfa = false;
+
+try {
+  mfa = await isRootMFAEnabled();
+} catch (error) {
+  console.error("MFA Error:", error.message);
+}
 
 results.push({
   check: "Root MFA Enabled",
