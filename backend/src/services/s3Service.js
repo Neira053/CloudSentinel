@@ -11,57 +11,98 @@ const s3Client = new S3Client({
 });
 
 export const fetchS3Buckets = async () => {
-  const data = await s3Client.send(new ListBucketsCommand({}));
 
-  const buckets = [];
+  try {
 
-  for (let bucket of data.Buckets) {
-    const bucketName = bucket.Name;
+    const data = await s3Client.send(
+      new ListBucketsCommand({})
+    );
 
-    let region = "unknown";
-    try {
-      const loc = await s3Client.send(
-        new GetBucketLocationCommand({ Bucket: bucketName })
-      );
-      region = loc.LocationConstraint || "us-east-1";
-    } catch {}
+    const buckets = [];
 
-    let encryption = "Not Enabled";
-    try {
-      await s3Client.send(
-        new GetBucketEncryptionCommand({ Bucket: bucketName })
-      );
-      encryption = "Enabled";
-    } catch {}
+    for (let bucket of data.Buckets) {
 
-    let isPublic = "Private";
+      const bucketName = bucket.Name;
 
-    try {
-      const publicAccess = await s3Client.send(
-        new GetPublicAccessBlockCommand({ Bucket: bucketName })
-      );
+      let region = "unknown";
 
-      const config = publicAccess.PublicAccessBlockConfiguration || {};
+      try {
 
-      if (
-        !config.BlockPublicAcls ||
-        !config.BlockPublicPolicy ||
-        !config.IgnorePublicAcls ||
-        !config.RestrictPublicBuckets
-      ) {
-        isPublic = "Possibly Public";
+        const loc = await s3Client.send(
+          new GetBucketLocationCommand({
+            Bucket: bucketName
+          })
+        );
+
+        region = loc.LocationConstraint || "us-east-1";
+
+      } catch (error) {
+
+        console.error("Bucket Location Error:", error);
       }
-    } catch {
-      isPublic = "Public";
+
+      let encryption = "Not Enabled";
+
+      try {
+
+        await s3Client.send(
+          new GetBucketEncryptionCommand({
+            Bucket: bucketName
+          })
+        );
+
+        encryption = "Enabled";
+
+      } catch (error) {
+
+        console.error("Encryption Error:", error);
+      }
+
+      let isPublic = "Private";
+
+      try {
+
+        const publicAccess = await s3Client.send(
+          new GetPublicAccessBlockCommand({
+            Bucket: bucketName
+          })
+        );
+
+        const config =
+          publicAccess.PublicAccessBlockConfiguration || {};
+
+        if (
+          !config.BlockPublicAcls ||
+          !config.BlockPublicPolicy ||
+          !config.IgnorePublicAcls ||
+          !config.RestrictPublicBuckets
+        ) {
+          isPublic = "Possibly Public";
+        }
+
+      } catch (error) {
+
+        console.error("Public Access Error:", error);
+
+        isPublic = "Public";
+      }
+
+      buckets.push({
+        name: bucketName,
+        region,
+        encryption,
+        publicAccess: isPublic,
+      });
     }
 
-    buckets.push({
-      name: bucketName,
-      region,
-      encryption,
-      publicAccess: isPublic,
-    });
-  }
+    console.log("Fetched S3 buckets:", buckets);
 
-  return buckets;
+    return buckets;
+
+  } catch (error) {
+
+    console.error("S3 ERROR:", error);
+
+    return [];
+  }
 };

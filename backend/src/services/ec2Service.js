@@ -9,28 +9,43 @@ const ec2Client = new EC2Client({
 });
 
 export const fetchEC2Instances = async () => {
-  const response = await ec2Client.send(new DescribeInstancesCommand({}));
+  try {
 
-  const instances = [];
+    const response = await ec2Client.send(
+      new DescribeInstancesCommand({})
+    );
 
-  for (let reservation of response.Reservations || []) {
-    for (let instance of reservation.Instances || []) {
+    const instances = [];
 
-      // Fetch security group details
-      const sgData = await ec2Client.send(
-        new DescribeSecurityGroupsCommand({
-          GroupIds: instance.SecurityGroups.map(sg => sg.GroupId),
-        })
-      );
+    for (let reservation of response.Reservations || []) {
 
-      instances.push({
-        instanceId: instance.InstanceId,
-        type: instance.InstanceType,
-        publicIp: instance.PublicIpAddress || "N/A",
-        securityGroups: sgData.SecurityGroups,
-      });
+      for (let instance of reservation.Instances || []) {
+
+        const sgData = await ec2Client.send(
+          new DescribeSecurityGroupsCommand({
+            GroupIds: instance.SecurityGroups.map(
+              sg => sg.GroupId
+            ),
+          })
+        );
+
+        instances.push({
+          instanceId: instance.InstanceId,
+          type: instance.InstanceType,
+          publicIp: instance.PublicIpAddress || "N/A",
+          securityGroups: sgData.SecurityGroups,
+        });
+      }
     }
-  }
 
-  return instances;
+    console.log("Fetched EC2 instances:", instances);
+
+    return instances;
+
+  } catch (error) {
+
+    console.error("EC2 ERROR:", error);
+
+    return [];
+  }
 };
