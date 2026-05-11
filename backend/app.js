@@ -14,6 +14,14 @@ app.get("/", (req, res) => {
   res.send("CloudSentinel Backend Running");
 });
 
+app.get("/env-test", (req, res) => {
+  res.json({
+    key: process.env.AWS_ACCESS_KEY_ID ? "Present" : "Missing",
+    secret: process.env.AWS_SECRET_ACCESS_KEY ? "Present" : "Missing",
+    region: process.env.AWS_REGION,
+  });
+});
+
 app.use("/api", ec2Routes);
 app.use("/api", s3Routes);
 app.use("/api", cisRoutes);
